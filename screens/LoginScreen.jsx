@@ -48,7 +48,7 @@ const LoginScreen = ({ navigation }) => {
           style={styles.imageBackground}
           resizeMode="stretch"
         >
-          <Text style={styles.titleText}>Translator App</Text>
+          <Text style={styles.titleText}>Ayekoo</Text>
 
           <View className="flex justify-center items-start h-[70%] mx-4">
             <Text
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
   titleText: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "black",
+    color: "#fff",
     marginTop: 40,
     marginLeft: 16,
   },

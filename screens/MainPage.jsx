@@ -1,59 +1,86 @@
-import { StatusBar } from "expo-status-bar";
-import { StyleSheet, Text, Button, View } from "react-native";
-import { useEffect, useState } from "react";
-import Voice from "@react-native-voice/voice";
-export default function MainPage() {
-  let [started, setStarted] = useState(false);
-  let [results, setResults] = useState([]);
+import React, { useState } from "react";
+import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
 
-  useEffect(() => {
-    Voice.onSpeechError = onSpeechError;
-    Voice.onSpeechResults = onSpeechResults;
-    
-    return () => {
-      Voice.destroy().then(Voice.removeAllListeners);
-    };
-  }, []);
-
-  const startSpeechToText = async () => {
-    await Voice.start("en-NZ");
-    setStarted(true);
-  };
-
-  const stopSpeechToText = async () => {
-    await Voice.stop();
-    setStarted(false);
-  };
-
-  const onSpeechResults = (result) => {
-    setResults(result.value);
-  };
-
-  const onSpeechError = (error) => {
-    console.log(error);
-  };
+const VoiceRecorderPage = () => {
+  const [transcription, setTranscription] = useState("");
+  const [translatedText, setTranslatedText] = useState("");
+  const [selectedLanguage, setSelectedLanguage] = useState("Spanish"); // Example default language
 
   return (
     <View style={styles.container}>
-      {!started ? (
-        <Button title="Start Speech to Text" onPress={startSpeechToText} />
-      ) : undefined}
-      {started ? (
-        <Button title="Stop Speech to Text" onPress={stopSpeechToText} />
-      ) : undefined}
-      {results.map((result, index) => (
-        <Text key={index}>{result}</Text>
-      ))}
-      <StatusBar style="auto" />
+      {/* Microphone Icon Button */}
+      <TouchableOpacity style={styles.microphoneButton}>
+        <Image
+          source={{
+            uri: "https://img.icons8.com/ios-filled/50/microphone.png",
+          }}
+          style={styles.microphoneIcon}
+        />
+      </TouchableOpacity>
+
+      {/* Transcription Text */}
+      <View style={styles.textBox}>
+        <Text style={styles.label}>Transcription:</Text>
+        <Text style={styles.text}>
+          {transcription || "Your transcription will appear here..."}
+        </Text>
+      </View>
+
+      {/* Language Selector */}
+      <View style={styles.textBox}>
+        <Text style={styles.label}>Translate to:</Text>
+        <Text style={styles.text}>{selectedLanguage}</Text>
+      </View>
+
+      {/* Translated Text */}
+      <View style={styles.textBox}>
+        <Text style={styles.label}>Translation:</Text>
+        <Text style={styles.text}>
+          {translatedText || "Translated text will appear here..."}
+        </Text>
+      </View>
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
-    alignItems: "center",
     justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F5FCFF",
+    padding: 20,
+  },
+
+  microphoneButton: {
+    marginVertical: 20,
+    padding: 20,
+    borderRadius: 50,
+    backgroundColor: "#6200EE",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  microphoneIcon: {
+    width: 50,
+    height: 50,
+    tintColor: "#FFFFFF",
+  },
+  textBox: {
+    width: "100%",
+    padding: 15,
+    marginVertical: 10,
+    borderRadius: 10,
+    backgroundColor: "#E0E0E0",
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 5,
+  },
+  text: {
+    fontSize: 16,
+    color: "#333",
   },
 });
+
+export default VoiceRecorderPage;
