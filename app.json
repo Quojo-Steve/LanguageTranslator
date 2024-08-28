@@ -7,21 +7,35 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Allow the app to access the microphone for speech recognition",
+        "NSSpeechRecognitionUsageDescription": "Allow the app to securely recognize user speech"
+      },
+      "bundleIdentifier": "oid"
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.ashafa_ahmed.LanguageTranslator"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "./withVoicePlugin"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "3877cb7b-b5a4-4124-8b0d-d45c561cba50"
+      }
     }
   }
 }
