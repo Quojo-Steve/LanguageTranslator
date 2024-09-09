@@ -1,23 +1,30 @@
-import React from "react";
+import React from 'react';
 import {
   StyleSheet,
   Text,
   View,
   StatusBar,
+  Image,
   TouchableOpacity,
   ImageBackground,
-} from "react-native";
+} from 'react-native';
 
-const FirstScreen = ({ navigation }) => {
+const FirstScreen = ({navigation}) => {
+  const handlePress = screen => {
+    console.log(`Navigating to ${screen}`);
+    navigation.navigate(screen);
+  };
+  
   return (
-    <View className="flex-1 bg-[#17A34A]">
+    <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
       <ImageBackground
-        source={require("../assets/images/try2.png")}
+        source={require('../assets/try2.png')}
         style={styles.imageBackground}
-        resizeMode="stretch"
-      >
-        <Text style={styles.titleText}>Ayekoo</Text>
+        resizeMode="stretch">
+        <View style={styles.imageContainer}>
+          <Image style={styles.logo} source={require('../assets/logo.png')} />
+        </View>
       </ImageBackground>
 
       <View style={styles.bottomContainer}>
@@ -28,13 +35,12 @@ const FirstScreen = ({ navigation }) => {
         </Text>
         <TouchableOpacity
           style={styles.loginButton}
-          onPress={() => navigation.navigate("login")}
-        >
+          onPress={() => handlePress('LoginScreen')}>
           <Text style={styles.buttonText}>Log In</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.signupButton}
-          onPress={() => navigation.navigate("signup")}
+          onPress={() => handlePress('SignupScreen')}
         >
           <Text style={styles.buttonText}>Sign Up</Text>
         </TouchableOpacity>
@@ -43,61 +49,71 @@ const FirstScreen = ({ navigation }) => {
   );
 };
 
-export default FirstScreen;
-
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#355E3B',
+  },
   imageBackground: {
     flex: 1,
-    justifyContent: "flex-start",
+    justifyContent: 'flex-start',
+    width: '100%',
+    height: '100%',
   },
-  titleText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#fff",
-    marginTop: 40,
-    marginLeft: 16,
+  imageContainer: {
+    flex: 1,
+    marginBottom: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+    height: '66%', // 2/3 of the height
+  },
+  logo: {
+    width: 250,
+    height: 250,
   },
   bottomContainer: {
-    width: "100%",
+    width: '100%',
     paddingHorizontal: 16,
-    position: "absolute",
-    bottom: 28,
+    position: 'absolute',
+    bottom: 48,
   },
   welcomeText: {
     fontSize: 20,
-    fontWeight: "600",
+    fontWeight: '600',
     lineHeight: 26.6,
-    textAlign: "left",
-    color: "#fff",
+    textAlign: 'left',
+    color: '#fff',
     marginBottom: 12,
   },
   descriptionText: {
     fontSize: 14,
-    fontWeight: "400",
+    fontWeight: '400',
     lineHeight: 18.62,
-    textAlign: "left",
-    color: "#fff",
+    textAlign: 'left',
+    color: '#fff',
     marginBottom: 36,
   },
   loginButton: {
-    backgroundColor: "black",
+    backgroundColor: 'black',
     padding: 12,
     borderRadius: 10,
     marginBottom: 12,
     height: 45,
-    justifyContent: "center",
+    justifyContent: 'center',
   },
   signupButton: {
-    backgroundColor: "black",
+    backgroundColor: 'black',
     padding: 12,
     borderRadius: 10,
     height: 45,
-    justifyContent: "center",
+    justifyContent: 'center',
   },
   buttonText: {
-    textAlign: "center",
+    textAlign: 'center',
     fontSize: 14,
-    fontWeight: "bold",
-    color: "white",
+    fontWeight: 'bold',
+    color: 'white',
   },
 });
+export default FirstScreen;

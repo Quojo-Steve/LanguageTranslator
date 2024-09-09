@@ -20,7 +20,7 @@ export default StackNav = () => {
         }}
       />
       <Stack.Screen
-        name="login"
+        name="LoginScreen"
         component={LoginScreen}
         options={{
           gestureEnabled: false,
@@ -28,7 +28,7 @@ export default StackNav = () => {
         }}
       />
       <Stack.Screen
-        name="signup"
+        name="SignupScreen"
         component={SignupScreen}
         options={{
           gestureEnabled: false,
@@ -36,7 +36,7 @@ export default StackNav = () => {
         }}
       />
       <Stack.Screen
-        name="mainPage"
+        name="MainPage"
         component={MainPage}
         options={{
           gestureEnabled: false,
