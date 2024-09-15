@@ -7,6 +7,7 @@ import {
   ImageBackground,
   TextInput,
   Alert,
+  Button,
   Keyboard,
   TouchableWithoutFeedback,
   ActivityIndicator,
@@ -14,7 +15,7 @@ import {
 import { Dropdown } from "react-native-element-dropdown";
 import axios from "axios";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { Audio } from 'expo-av';
+import { Audio } from "expo-av";
 
 const MainPage = () => {
   const [textToTranslate, setTextToTranslate] = useState("");
@@ -25,6 +26,7 @@ const MainPage = () => {
   const [loading, setLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recording, setRecording] = useState(null);
+  const [recordings, setRecordings] = useState([]);
 
   const [languageData, setLanguageData] = useState([
     { label: "English", value: "en" },
@@ -36,67 +38,111 @@ const MainPage = () => {
     { label: "Igbo", value: "ig" },
   ]);
 
+  // async function startRecording() {
+  //   try {
+  //     const perm = await Audio.requestPermissionsAsync();
+  //     if (perm.status === "granted") {
+  //       await Audio.setAudioModeAsync({
+  //         allowsRecordingIOS: true,
+  //         playsInSilentModeIOS: true,
+  //       });
+  //       const { recording } = await Audio.Recording.createAsync(
+  //         Audio.RECORDING_OPTIONS_PRESET_HIGH_QUALITY
+  //       );
+  //       setRecording(recording);
+  //     }
+  //   } catch (err) {}
+  // }
+
   async function startRecording() {
     try {
-      const permission = await Audio.requestPermissionsAsync();
-      if (permission.status === 'granted') {
+      const perm = await Audio.requestPermissionsAsync();
+      if (perm.status === "granted") {
         await Audio.setAudioModeAsync({
           allowsRecordingIOS: true,
           playsInSilentModeIOS: true,
         });
+        const recordingOptions = {
+          android: {
+            extension: ".m4a",
+            outputFormat: Audio.RECORDING_OPTION_ANDROID_OUTPUT_FORMAT_MPEG_4,
+            audioEncoder: Audio.RECORDING_OPTION_ANDROID_AUDIO_ENCODER_AAC,
+            sampleRate: 44100,
+            numberOfChannels: 2,
+            bitRate: 128000,
+          },
+          ios: {
+            extension: ".m4a",
+            audioQuality: Audio.RECORDING_OPTION_IOS_AUDIO_QUALITY_HIGH,
+            sampleRate: 44100,
+            numberOfChannels: 2,
+            bitRate: 128000,
+            outputFormat: Audio.RECORDING_OPTION_IOS_OUTPUT_FORMAT_MPEG4AAC,
+          },
+        };
         const { recording } = await Audio.Recording.createAsync(
-          Audio.RECORDING_OPTIONS_PRESET_HIGH_QUALITY
+          recordingOptions
         );
         setRecording(recording);
-        setIsRecording(true);
       }
-    } catch (error) {
-      console.error('Failed to start recording', error);
+    } catch (err) {
+      Alert.alert("Error", "Failed to start recording");
     }
   }
 
   async function stopRecording() {
-    setIsRecording(false);
+    setRecording(undefined);
     await recording.stopAndUnloadAsync();
-    const uri = recording.getURI();
-    setRecording(null);
 
-    // Send the recorded file to the Flask API for transcription
-    sendRecordingToApi(uri);
+    // Get the URI of the recorded audio
+    const uri = recording.getURI();
+
+    // Automatically send the recording to the API for transcription
+    if (uri) {
+      sendRecordingToTranscriptionAPI(uri); // Send the audio to the transcription API
+    }
+
+    let allRecordings = [...recordings];
+    const { sound, status } = await recording.createNewLoadedSoundAsync();
+    allRecordings.push({
+      sound: sound,
+      file: uri, // Add URI to the recordings list
+    });
+
+    setRecordings(allRecordings);
   }
 
-  async function sendRecordingToApi(uri) {
+  const sendRecordingToTranscriptionAPI = async (uri) => {
+    setLoading(true);
     const formData = new FormData();
-    formData.append('audio', {
+    formData.append("audio", {
       uri: uri,
-      name: 'recording.wav',
-      type: 'audio/wav',
+      type: "audio/m4a",
+      name: "recording.m4a", // File extension .m4a
     });
 
     try {
-      const response = await axios.post("https://languagetranslatorappapi.onrender.com/transcribe", formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      setTextToTranslate(response.data.transcribed_text);
+      const response = await axios.post(
+        "https://languagetranslatorappapi.onrender.com/transcribe",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      const transcription = response.data.transcription;
+      setTextToTranslate(transcription); // Automatically set the transcribed text for translation
     } catch (error) {
-      // Log detailed error information
-      if (error.response) {
-        console.error('Error response data:', error.response.data);
-        console.error('Error response status:', error.response.status);
-        console.error('Error response headers:', error.response.headers);
-        Alert.alert('Error', `Server responded with status ${error.response.status}: ${error.response.data}`);
-      } else if (error.request) {
-        console.error('Error request data:', error.request);
-        Alert.alert('Error', 'No response received from server');
-      } else {
-        console.error('Error message:', error.message);
-        Alert.alert('Error', `Request failed: ${error.message}`);
-      }
+      Alert.alert("Error", error.message);
+    } finally {
+      setLoading(false);
     }
-  }
+  };
+
+  const languageDataForSecondDropdown = languageData.filter(
+    (item) => item.value !== selectedLanguage1
+  );
 
   const sendTranslationToApi = async () => {
     if (!textToTranslate || !selectedLanguage1 || !selectedLanguage2) {
@@ -107,11 +153,14 @@ const MainPage = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post("https://languagetranslatorappapi.onrender.com/translate", {
-        text: textToTranslate,
-        language_from: selectedLanguage1,
-        language_to: selectedLanguage2,
-      });
+      const response = await axios.post(
+        "https://languagetranslatorappapi.onrender.com/translate",
+        {
+          text: textToTranslate,
+          language_from: selectedLanguage1,
+          language_to: selectedLanguage2,
+        }
+      );
 
       setTranslatedText(response.data.translated_text);
     } catch (error) {
@@ -125,9 +174,25 @@ const MainPage = () => {
     }
   };
 
-  const languageDataForSecondDropdown = languageData.filter(
-    (item) => item.value !== selectedLanguage1
-  );
+  function getRecordingLines() {
+    return recordings.map((recordingLine, index) => {
+      return (
+        <View key={index} style={styles.row}>
+          <Text style={styles.fill}>
+            Recording #{index + 1} | {recordingLine.duration}
+          </Text>
+          <Button
+            onPress={() => recordingLine.sound.replayAsync()}
+            title="Play"
+          ></Button>
+        </View>
+      );
+    });
+  }
+
+  function clearRecordings() {
+    setRecordings([]);
+  }
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -211,8 +276,14 @@ const MainPage = () => {
 
             {/* Microphone Icon for Recording */}
             <View style={styles.micArea}>
+              {/* <Button
+                title={recording ? "Stop Recording" : "Start Recording\n\n\n"}
+                onPress={recording ? stopRecording : startRecording}
+              /> */}
+
+              {/* Microphone Icon for Recording */}
               <View style={styles.micContainer}>
-                {isRecording ? (
+                {recording ? (
                   <TouchableOpacity onPress={stopRecording}>
                     <Icon name="cancel" size={40} color="red" />
                   </TouchableOpacity>
@@ -222,6 +293,12 @@ const MainPage = () => {
                   </TouchableOpacity>
                 )}
               </View>
+
+              {getRecordingLines()}
+              <Button
+                title={recordings.length > 0 ? "\n\n\nClear Recordings" : ""}
+                onPress={clearRecordings}
+              />
             </View>
           </View>
         </ImageBackground>

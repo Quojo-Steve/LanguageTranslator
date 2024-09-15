@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import ToastManager, { Toast } from 'toastify-react-native';
+import ForgotPasswordModal from "./ForgotPasswordModal"
 import { AuthContext } from '../context/AuthContext';
 
 const LoginScreen = ({ navigation }) => {
@@ -20,6 +21,7 @@ const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setisLoading] = useState(false);
+  const [isModelOpen, setisModelOpen] = useState(false)
 
     const handleLogin = async () => {
     try {
@@ -90,9 +92,12 @@ const LoginScreen = ({ navigation }) => {
               secureTextEntry
             />
           </View>
+          <TouchableOpacity onPress={()=> setisModelOpen(true)}>
           <Text style={styles.forgotPasswordText}>
             Forgot Password?
           </Text>
+          </TouchableOpacity>
+          
           <TouchableOpacity
             style={styles.loginButton}
             onPress={handleLogin}
@@ -112,6 +117,10 @@ const LoginScreen = ({ navigation }) => {
           </Text>
         </View>
       </KeyboardAvoidingView>
+      <ForgotPasswordModal
+        visible={isModelOpen}
+        onCancel={() => setisModelOpen(false)}
+      />
     </View>
   );
 };

@@ -8,7 +8,7 @@ export default StackNav = () => {
   const Stack = createNativeStackNavigator();
   return (
     <Stack.Navigator
-      initialRouteName="firstPage"
+      initialRouteName="MainPage"
       screenOptions={{ headerShown: false }}
     >
       <Stack.Screen

@@ -17,7 +17,7 @@ const FirstScreen = ({navigation}) => {
   
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="light-content" backgroundColor="#fff" />
       <ImageBackground
         source={require('../assets/try2.png')}
         style={styles.imageBackground}
