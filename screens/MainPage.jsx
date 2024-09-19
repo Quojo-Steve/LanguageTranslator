@@ -12,6 +12,7 @@ import {
   TouchableWithoutFeedback,
   ActivityIndicator,
 } from "react-native";
+import * as Speech from "expo-speech";
 import { Dropdown } from "react-native-element-dropdown";
 import axios from "axios";
 import Icon from "react-native-vector-icons/MaterialIcons";
@@ -26,33 +27,24 @@ const MainPage = () => {
   const [loading, setLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recording, setRecording] = useState(null);
-  const [recordings, setRecordings] = useState([]);
 
   const [languageData, setLanguageData] = useState([
     { label: "English", value: "en" },
     { label: "Twi", value: "ak" },
     { label: "Hausa", value: "ha" },
-    { label: "Swahili", value: "sw" },
+    // { label: "Swahili", value: "sw" },
     { label: "Yoruba", value: "yo" },
     { label: "Ewe", value: "ee" },
     { label: "Igbo", value: "ig" },
   ]);
 
-  // async function startRecording() {
-  //   try {
-  //     const perm = await Audio.requestPermissionsAsync();
-  //     if (perm.status === "granted") {
-  //       await Audio.setAudioModeAsync({
-  //         allowsRecordingIOS: true,
-  //         playsInSilentModeIOS: true,
-  //       });
-  //       const { recording } = await Audio.Recording.createAsync(
-  //         Audio.RECORDING_OPTIONS_PRESET_HIGH_QUALITY
-  //       );
-  //       setRecording(recording);
-  //     }
-  //   } catch (err) {}
-  // }
+  const speakText = (text) => {
+    if (!text) {
+      Alert.alert("Error", "There is no text to read!");
+    } else {
+      Speech.speak(text); // Use Expo Speech API to read text
+    }
+  };
 
   async function startRecording() {
     try {
@@ -84,6 +76,7 @@ const MainPage = () => {
           recordingOptions
         );
         setRecording(recording);
+        setIsRecording(true);
       }
     } catch (err) {
       Alert.alert("Error", "Failed to start recording");
@@ -91,50 +84,59 @@ const MainPage = () => {
   }
 
   async function stopRecording() {
-    setRecording(undefined);
-    await recording.stopAndUnloadAsync();
-
-    // Get the URI of the recorded audio
-    const uri = recording.getURI();
-
-    // Automatically send the recording to the API for transcription
-    if (uri) {
-      sendRecordingToTranscriptionAPI(uri); // Send the audio to the transcription API
+    setIsRecording(false);
+    try {
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      console.log("Recording URI:", uri);
+      if (uri) {
+        await sendRecordingToTranscriptionAPI(uri); // Wait for transcription to complete
+      }
+    } catch (err) {
+      Alert.alert("Error", "Failed to stop recording properly");
+    } finally {
+      setRecording(null); // Ensure recording is reset no matter what
     }
-
-    let allRecordings = [...recordings];
-    const { sound, status } = await recording.createNewLoadedSoundAsync();
-    allRecordings.push({
-      sound: sound,
-      file: uri, // Add URI to the recordings list
-    });
-
-    setRecordings(allRecordings);
   }
 
   const sendRecordingToTranscriptionAPI = async (uri) => {
     setLoading(true);
+
     const formData = new FormData();
     formData.append("audio", {
-      uri: uri,
-      type: "audio/m4a",
-      name: "recording.m4a", // File extension .m4a
+      uri: uri, // URI of the audio file
+      type: "audio/m4a", // MIME type of the audio file
+      name: "recording.m4a", // File name
     });
 
     try {
       const response = await axios.post(
-        "https://languagetranslatorappapi.onrender.com/transcribe",
+        "https://woezorapi.onrender.com/transcribe", // Your Flask transcription API endpoint
         formData,
         {
           headers: {
-            "Content-Type": "multipart/form-data",
+            "Content-Type": "multipart/form-data", // Required for file uploads
           },
         }
       );
-      const transcription = response.data.transcription;
-      setTextToTranslate(transcription); // Automatically set the transcribed text for translation
+
+      // Check and log the response structure
+      console.log("Transcription response:", response.data);
+
+      // Update textToTranslate using the 'text' field from the response
+      if (response.data && response.data.text) {
+        setTextToTranslate(response.data.text); // Set the 'text' value from the API response
+        console.log("Updated text to translate:", response.data.text);
+      } else {
+        console.error(
+          "Unexpected transcription response format:",
+          response.data
+        );
+        Alert.alert("Error", "Unexpected response format");
+      }
     } catch (error) {
-      Alert.alert("Error", error.message);
+      console.error("Error uploading audio", error);
+      Alert.alert("Error", "Transcription failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -173,26 +175,6 @@ const MainPage = () => {
       setLoading(false);
     }
   };
-
-  function getRecordingLines() {
-    return recordings.map((recordingLine, index) => {
-      return (
-        <View key={index} style={styles.row}>
-          <Text style={styles.fill}>
-            Recording #{index + 1} | {recordingLine.duration}
-          </Text>
-          <Button
-            onPress={() => recordingLine.sound.replayAsync()}
-            title="Play"
-          ></Button>
-        </View>
-      );
-    });
-  }
-
-  function clearRecordings() {
-    setRecordings([]);
-  }
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -269,21 +251,20 @@ const MainPage = () => {
 
             <View style={styles.textBox}>
               <Text style={styles.label}>Translation:</Text>
-              <Text style={styles.text}>
-                {translatedText || "Translated text will appear here..."}
-              </Text>
+              <View style={styles.inputWithIcon}>
+                <Text style={styles.text}>
+                  {translatedText || "Translated text will appear here..."}
+                </Text>
+                <TouchableOpacity onPress={() => speakText(translatedText)}>
+                  <Icon name="volume-up" size={24} color="#fff" />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Microphone Icon for Recording */}
             <View style={styles.micArea}>
-              {/* <Button
-                title={recording ? "Stop Recording" : "Start Recording\n\n\n"}
-                onPress={recording ? stopRecording : startRecording}
-              /> */}
-
-              {/* Microphone Icon for Recording */}
               <View style={styles.micContainer}>
-                {recording ? (
+                {isRecording ? (
                   <TouchableOpacity onPress={stopRecording}>
                     <Icon name="cancel" size={40} color="red" />
                   </TouchableOpacity>
@@ -293,12 +274,6 @@ const MainPage = () => {
                   </TouchableOpacity>
                 )}
               </View>
-
-              {getRecordingLines()}
-              <Button
-                title={recordings.length > 0 ? "\n\n\nClear Recordings" : ""}
-                onPress={clearRecordings}
-              />
             </View>
           </View>
         </ImageBackground>

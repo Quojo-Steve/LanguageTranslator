@@ -169,6 +169,38 @@ async function sendRecordingToApi(uri) {
   }
 }
 
+const sendRecordingToTranscriptionAPI = async (uri) => {
+  setLoading(true);
+  const formData = new FormData();
+  formData.append("audio", {
+    uri: uri,
+    type: "audio/m4a",
+    name: "recording.m4a", // File extension .m4a
+  });
+
+  try {
+    const response = await axios.post(
+      "https://languagetranslatorappapi.onrender.com/transcribe",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    const transcription = response.data.transcription;
+    setTextToTranslate(transcription); // Automatically set the transcribed text for translation
+  } catch (error) {
+    Alert.alert("Error", error.message);
+  } finally {
+    setLoading(false);
+  }
+};
+
+const languageDataForSecondDropdown = languageData.filter(
+  (item) => item.value !== selectedLanguage1
+);
+
 const sendTranslationToApi = async () => {
   if (!textToTranslate || !selectedLanguage1 || !selectedLanguage2) {
     Alert.alert("Please fill in all fields");
@@ -199,6 +231,18 @@ const sendTranslationToApi = async () => {
   }
 };
 
-const languageDataForSecondDropdown = languageData.filter(
-  (item) => item.value !== selectedLanguage1
-);
+// async function startRecording() {
+//   try {
+//     const perm = await Audio.requestPermissionsAsync();
+//     if (perm.status === "granted") {
+//       await Audio.setAudioModeAsync({
+//         allowsRecordingIOS: true,
+//         playsInSilentModeIOS: true,
+//       });
+//       const { recording } = await Audio.Recording.createAsync(
+//         Audio.RECORDING_OPTIONS_PRESET_HIGH_QUALITY
+//       );
+//       setRecording(recording);
+//     }
+//   } catch (err) {}
+// }
