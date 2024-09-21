@@ -7,18 +7,21 @@ import {
   ImageBackground,
   TextInput,
   Alert,
-  Button,
+  Image,
   Keyboard,
   TouchableWithoutFeedback,
   ActivityIndicator,
+  ScrollView,
 } from "react-native";
 import * as Speech from "expo-speech";
 import { Dropdown } from "react-native-element-dropdown";
 import axios from "axios";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { Audio } from "expo-av";
+import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system"; // Import FileSystem
 
-const MainPage = () => {
+const MainPage = ({ navigation }) => {
   const [textToTranslate, setTextToTranslate] = useState("");
   const [translatedText, setTranslatedText] = useState("");
   const [isFocus, setIsFocus] = useState(false);
@@ -32,11 +35,13 @@ const MainPage = () => {
     { label: "English", value: "en" },
     { label: "Twi", value: "ak" },
     { label: "Hausa", value: "ha" },
-    // { label: "Swahili", value: "sw" },
+    { label: "Ga", value: "gaa" },
     { label: "Yoruba", value: "yo" },
     { label: "Ewe", value: "ee" },
     { label: "Igbo", value: "ig" },
   ]);
+
+  const GOOGLE_CLOUD_API_KEY = "AIzaSyAy6x8utPLPPyt_4thV9JKdv3OUHQGLPNI"; // Replace with your actual API key
 
   const speakText = (text) => {
     if (!text) {
@@ -146,9 +151,116 @@ const MainPage = () => {
     (item) => item.value !== selectedLanguage1
   );
 
-  const sendTranslationToApi = async () => {
-    if (!textToTranslate || !selectedLanguage1 || !selectedLanguage2) {
-      Alert.alert("Please fill in all fields");
+  const takePhoto = async (mode) => {
+    try {
+      let res = {};
+      await ImagePicker.requestCameraPermissionsAsync();
+      res = await ImagePicker.launchCameraAsync({
+        cameraType: ImagePicker.CameraType.back,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 1,
+      });
+
+      if (!res.canceled) {
+        const imageUri = res.assets[0].uri;
+        const base64Img = await FileSystem.readAsStringAsync(imageUri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        callGoogleVisionAsync(base64Img); // Send the image to Google Vision API for OCR
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const uploadImage = async (mode) => {
+    try {
+      let res = {};
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 1,
+      });
+
+      if (!res.canceled) {
+        const imageUri = res.assets[0].uri;
+        const base64Img = await FileSystem.readAsStringAsync(imageUri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        callGoogleVisionAsync(base64Img); // Send the image to Google Vision API for OCR
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const callGoogleVisionAsync = async (base64Img) => {
+    try {
+      setLoading(true); // Show loading spinner
+      const apiUrl = `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_CLOUD_API_KEY}`;
+
+      const body = {
+        requests: [
+          {
+            image: {
+              content: base64Img,
+            },
+            features: [{ type: "TEXT_DETECTION" }],
+          },
+        ],
+      };
+
+      const response = await axios.post(apiUrl, body, {
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const detectedText =
+        response.data.responses[0].fullTextAnnotation.text || "No text found";
+      setLoading(false); // Hide loading spinner
+      console.log(detectedText);
+      setTextToTranslate(detectedText); // Set the detected text
+    } catch (error) {
+      console.log("Error with Google Vision API", error);
+      setLoading(false); // Hide loading spinner even if there's an error
+    }
+  };
+
+  const handleCameraClick = () => {
+    Alert.alert(
+      "Select Image Source",
+      "Choose an option",
+      [
+        {
+          text: "Take Photo",
+          onPress: takePhoto,
+        },
+        {
+          text: "Choose from Gallery",
+          onPress: uploadImage,
+        },
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
+  const translateTextWithGoogle = async (
+    text,
+    sourceLanguage,
+    targetLanguage
+  ) => {
+    if (!text || !sourceLanguage || !targetLanguage) {
+      Alert.alert(
+        "Error",
+        "Please enter text and select both source and target languages."
+      );
       return;
     }
 
@@ -156,24 +268,43 @@ const MainPage = () => {
 
     try {
       const response = await axios.post(
-        "https://languagetranslatorappapi.onrender.com/translate",
+        `https://translation.googleapis.com/language/translate/v2`,
+        {},
         {
-          text: textToTranslate,
-          language_from: selectedLanguage1,
-          language_to: selectedLanguage2,
+          params: {
+            q: text,
+            source: sourceLanguage, // The source language (e.g., 'en' for English)
+            target: targetLanguage, // The target language (e.g., 'es' for Spanish)
+            key: GOOGLE_CLOUD_API_KEY,
+          },
+          headers: {
+            "Content-Type": "application/json",
+          },
         }
       );
 
-      setTranslatedText(response.data.translated_text);
-    } catch (error) {
-      if (error.response) {
-        Alert.alert("Translation failed", error.response.data.error);
+      if (response.data && response.data.data.translations.length > 0) {
+        const translatedText =
+          response.data.data.translations[0].translatedText;
+        return translatedText; // Return the translated text
       } else {
-        Alert.alert("Error", error.message);
+        Alert.alert("Translation Error", "Failed to translate the text.");
       }
+    } catch (error) {
+      console.error("Error during translation", error);
+      Alert.alert("Error", "Translation failed. Please try again.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTranslate = async () => {
+    const result = await translateTextWithGoogle(
+      textToTranslate,
+      selectedLanguage1, // The source language
+      selectedLanguage2 // The target language
+    );
+    setTranslatedText(result);
   };
 
   return (
@@ -185,7 +316,7 @@ const MainPage = () => {
           resizeMode="stretch"
         >
           <Text style={styles.titleText}>Woezor</Text>
-          <View style={styles.innerContainer}>
+          <ScrollView style={styles.innerContainer}>
             <View style={styles.dropdownContainer}>
               <View style={styles.textBoxDropdown}>
                 <Dropdown
@@ -242,7 +373,7 @@ const MainPage = () => {
                 {loading ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <TouchableOpacity onPress={sendTranslationToApi}>
+                  <TouchableOpacity onPress={handleTranslate}>
                     <Icon name="send" size={24} color="#fff" />
                   </TouchableOpacity>
                 )}
@@ -274,8 +405,13 @@ const MainPage = () => {
                   </TouchableOpacity>
                 )}
               </View>
+              <View style={styles.micContainer}>
+                <TouchableOpacity onPress={handleCameraClick}>
+                  <Icon name="camera-alt" size={40} color="#355E3B" />
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          </ScrollView>
         </ImageBackground>
       </View>
     </TouchableWithoutFeedback>
@@ -291,7 +427,9 @@ const styles = StyleSheet.create({
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 60,
+    marginTop: 80,
+    gap: "60",
+    flexDirection: "row",
   },
   micContainer: {
     display: "flex",

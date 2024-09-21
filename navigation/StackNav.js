@@ -3,6 +3,7 @@ import FirstScreen from "../screens/FirstScreen";
 import LoginScreen from "../screens/LoginScreen";
 import SignupScreen from "../screens/SignupScreen";
 import MainPage from "../screens/MainPage";
+import OCRScreen from "../screens/OCRScreen";
 
 export default StackNav = () => {
   const Stack = createNativeStackNavigator();
