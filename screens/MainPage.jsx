@@ -41,7 +41,7 @@ const MainPage = ({ navigation }) => {
     { label: "Igbo", value: "ig" },
   ]);
 
-  const GOOGLE_CLOUD_API_KEY = "AIzaSyAy6x8utPLPPyt_4thV9JKdv3OUHQGLPNI"; // Replace with your actual API key
+  const GOOGLE_CLOUD_API_KEY = "Your api key "; // Replace with your actual API key
 
   const speakText = (text) => {
     if (!text) {
